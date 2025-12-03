@@ -6,10 +6,14 @@
 import React, { useState, useEffect } from 'react';
 import { AppType, LessonPlan } from '../types';
 import DynamicPreview from '../components/DynamicPreview';
+import ExportModal from '../components/ExportModal';
+import { useAuth } from '../utils/AuthContext';
 
 const MyDocumentsPage: React.FC = () => {
   const [plans, setPlans] = useState<LessonPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<LessonPlan | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const savedPlans = JSON.parse(localStorage.getItem('savedPlans') || '[]');
@@ -103,6 +107,16 @@ const MyDocumentsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Export Modal */}
+      {showExportModal && selectedPlan && (
+        <ExportModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          document={selectedPlan}
+          userTier={user?.subscription_tier || 'free'}
+        />
+      )}
+
       {/* Modal View */}
       {selectedPlan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
@@ -143,6 +157,15 @@ const MyDocumentsPage: React.FC = () => {
              </div>
              <div className="px-6 py-4 border-t-2 border-black bg-white dark:bg-[#1e293b] flex justify-end gap-3">
                 <button onClick={() => setSelectedPlan(null)} className="px-4 py-2 rounded-lg text-black font-bold border-2 border-transparent hover:bg-slate-100 transition-colors">Close</button>
+                <button 
+                  className="px-4 py-2 rounded-lg bg-brand-blue text-white border-2 border-black hover:bg-blue-600 font-bold transition-all shadow-neo-sm hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] flex items-center gap-2"
+                  onClick={() => {
+                    console.log('📤 Export button clicked', selectedPlan);
+                    setShowExportModal(true);
+                  }}
+                >
+                  <span className="material-symbols-outlined text-lg">download</span> Export
+                </button>
                 <button className="px-4 py-2 rounded-lg bg-brand-yellow text-black border-2 border-black hover:bg-yellow-400 font-bold transition-all shadow-neo-sm hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] flex items-center gap-2" onClick={() => window.print()}>
                   <span className="material-symbols-outlined text-lg">print</span> Print
                 </button>

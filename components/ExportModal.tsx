@@ -28,6 +28,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, document, us
   const isPro = userTier === 'pro' || userTier === 'school';
 
   const handleExport = async () => {
+    console.log('🚀 Export started', { format, document, isPro });
     setIsExporting(true);
 
     try {
@@ -37,10 +38,16 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, document, us
         footerText: customFooter || undefined
       };
 
+      console.log('📦 Export options:', options);
+
       if (format === 'pdf') {
-        await exportToPDF(document, options, true);
+        console.log('📄 Exporting to PDF...');
+        const blob = await exportToPDF(document, options, true);
+        console.log('✅ PDF export successful', blob);
       } else {
-        await exportToDOCX(document, options, true);
+        console.log('📝 Exporting to DOCX...');
+        const blob = await exportToDOCX(document, options, true);
+        console.log('✅ DOCX export successful', blob);
       }
 
       // Close modal after successful export
@@ -49,14 +56,14 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, document, us
         setIsExporting(false);
       }, 500);
     } catch (error) {
-      console.error('Export error:', error);
-      alert('Failed to export document. Please try again.');
+      console.error('❌ Export error:', error);
+      alert(`Failed to export document: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setIsExporting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white dark:bg-[#1e293b] rounded-2xl border-2 border-black shadow-neo-lg max-w-lg w-full overflow-hidden">
         {/* Header */}
         <div className="bg-brand-blue border-b-2 border-black px-6 py-4">
