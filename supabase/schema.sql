@@ -201,3 +201,95 @@ BEGIN
   WHERE auth0_id = user_auth0_id;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ============================================
+-- AUTO-DELETION OF OLD DOCUMENTS (3 DAYS)
+-- ============================================
+
+-- Enable pg_cron extension (run as superuser/admin)
+-- Note: This needs to be enabled in Supabase Dashboard -> Database -> Extensions
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Function to delete documents older than 3 days
+CREATE OR REPLACE FUNCTION delete_old_documents()
+RETURNS INTEGER AS $$
+DECLARE
+  deleted_count INTEGER;
+BEGIN
+  -- Delete documents created more than 3 days ago
+  DELETE FROM documents
+  WHERE created_at < NOW() - INTERVAL '3 days';
+  
+  -- Get the count of deleted rows
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+  
+  -- Log the deletion
+  RAISE NOTICE 'Deleted % old documents', deleted_count;
+  
+  RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Schedule the cleanup function to run daily at 2 AM UTC
+-- This uses pg_cron to automatically delete old documents
+SELECT cron.schedule(
+  'delete-old-documents-daily',  -- Job name
+  '0 2 * * *',                   -- Cron expression: Daily at 2:00 AM UTC
+  $$SELECT delete_old_documents();$$
+);
+
+-- Alternative: If pg_cron is not available, you can use this function manually
+-- or call it from your application periodically
+COMMENT ON FUNCTION delete_old_documents() IS 
+'Automatically deletes documents older than 3 days. Scheduled to run daily at 2 AM UTC via pg_cron.';
+
+-- View to check documents that will be deleted soon
+CREATE OR REPLACE VIEW documents_expiring_soon AS
+SELECT 
+  id,
+  user_id,
+  title,
+  type,
+  created_at,
+  NOW() - created_at AS age,
+  (INTERVAL '3 days' - (NOW() - created_at)) AS time_until_deletion
+FROM documents
+WHERE created_at > NOW() - INTERVAL '3 days'
+ORDER BY created_at ASC;
+
+COMMENT ON VIEW documents_expiring_soon IS 
+'Shows all active documents with their age and time remaining before auto-deletion.';
+
+-- Function to get document expiry info
+CREATE OR REPLACE FUNCTION get_document_expiry_info(document_id UUID)
+RETURNS JSONB AS $$
+DECLARE
+  doc_created TIMESTAMP WITH TIME ZONE;
+  expiry_date TIMESTAMP WITH TIME ZONE;
+  is_expired BOOLEAN;
+  days_remaining NUMERIC;
+BEGIN
+  SELECT created_at INTO doc_created
+  FROM documents
+  WHERE id = document_id;
+  
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Document not found');
+  END IF;
+  
+  expiry_date := doc_created + INTERVAL '3 days';
+  is_expired := expiry_date < NOW();
+  days_remaining := EXTRACT(EPOCH FROM (expiry_date - NOW())) / 86400.0;
+  
+  RETURN jsonb_build_object(
+    'created_at', doc_created,
+    'expiry_date', expiry_date,
+    'is_expired', is_expired,
+    'days_remaining', ROUND(days_remaining, 2),
+    'hours_remaining', ROUND(days_remaining * 24, 1)
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION get_document_expiry_info(UUID) IS 
+'Returns detailed expiry information for a specific document.';
