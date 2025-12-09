@@ -26,7 +26,7 @@ export const STUDY_NOTES_TEMPLATES: Template[] = [
     title: 'Visual / Flowchart',
     description: 'Notes structured around processes, timelines, and connections between concepts.',
     appType: 'study-notes',
-    promptContext: 'Focus on "Flowchart" and "Visual" style. Present information as step-by-step processes, timelines, or hierarchy lists. Use MermaidJS syntax (```mermaid ... ```) heavily for all diagrams. Minimize long paragraphs.',
+    promptContext: 'Focus on "Flowchart" and "Visual" style. Present information as step-by-step processes, timelines, or hierarchy lists. Use Mermaid diagrams ONLY with correct syntax: start with ```mermaid, then flowchart TD or graph LR, use simple node IDs (A, B, C), keep labels under 15 chars, use --> for arrows with spaces, NO semicolons, NO special chars in labels. Minimize long paragraphs.',
     previewPrompt: 'A visual study guide with flowcharts and diagrammatic layouts.',
     tags: ['Visual', 'Process', 'Flowchart']
   }

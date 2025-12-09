@@ -5,6 +5,8 @@ export interface UserSettings {
   institution: string;
   defaultGrade: string;
   defaultSubject: string;
+  geminiApiKey: string;
+  geminiModel: string;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -12,7 +14,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
   email: 'educator@school.org',
   institution: 'Narayana Group',
   defaultGrade: '',
-  defaultSubject: ''
+  defaultSubject: '',
+  geminiApiKey: '',
+  geminiModel: 'gemini-2.0-flash-exp'
 };
 
 export const getSettings = (): UserSettings => {

@@ -9,6 +9,10 @@ import { getSettings } from '../../settings';
 import { contentGenerationLimiter, imageLimiter } from '../../utils/rateLimiter';
 import { InputSanitizer } from '../../utils/inputSanitizer';
 import { EncryptedStorage } from '../../utils/encryption';
+import { useStreamingVerification } from '../../utils/useVerification';
+import { enhancePromptWithVerificationRules } from '../../utils/verificationAgent';
+import { getUserApiKey, getUserModel } from '../../utils/apiKeyManager';
+import VerificationBadge from '../VerificationBadge';
 
 interface Props {
   onBack: () => void;
@@ -35,6 +39,20 @@ const LessonPlanGenerator: React.FC<Props> = ({ onBack }) => {
   // Image Gen State
   const [generatedImage, setGeneratedImage] = useState<string>('');
   const [isImageLoading, setIsImageLoading] = useState(false);
+  
+  // Verification Agent Integration
+  const apiKey = getUserApiKey();
+  const verification = useStreamingVerification(
+    apiKey,
+    {
+      enabled: true,
+      verifyMermaid: false,  // Lesson plans rarely have diagrams
+      verifyCode: false,
+      verifyMarkdown: true,
+      autoFix: true,
+      showWarnings: true
+    }
+  );
 
   useEffect(() => {
     // Load Template
@@ -71,8 +89,9 @@ const LessonPlanGenerator: React.FC<Props> = ({ onBack }) => {
 
     setIsImageLoading(true);
     try {
-      if (!process.env.API_KEY) throw new Error("API Key missing");
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = getUserApiKey();
+      if (!apiKey) throw new Error("Please add your Google Gemini API key in Settings");
+      const ai = new GoogleGenAI({ apiKey });
       
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
@@ -122,15 +141,18 @@ const LessonPlanGenerator: React.FC<Props> = ({ onBack }) => {
     setIsLoading(true);
     setGeneratedPlan('');
     setIsSaved(false);
+    verification.resetStream();
 
     try {
-      if (!process.env.API_KEY) throw new Error("API Key missing");
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = getUserApiKey();
+      const model = getUserModel();
+      if (!apiKey) throw new Error("Please add your Google Gemini API key in Settings");
+      const ai = new GoogleGenAI({ apiKey });
       const diffs = [];
       if (diffStruggling) diffs.push("Struggling Students");
       if (diffAdvanced) diffs.push("Advanced Learners");
 
-      let prompt = `Create a lesson plan content.
+      const basePrompt = `Create a lesson plan content.
         Context: Grade: ${sanitized.grade}, Subject: ${sanitized.subject}, Topic: ${sanitized.topic}, Title: ${sanitized.title}, Duration: ${duration}.
         
         TEMPLATE INSTRUCTIONS: ${activeTemplate ? activeTemplate.context : 'Standard structure required.'}
@@ -145,14 +167,32 @@ const LessonPlanGenerator: React.FC<Props> = ({ onBack }) => {
         7. ## Lesson Reflection (Leave blank space for handwritten notes)
         Format: Clean Markdown. Use H2 (##) for sections.`;
 
+      // Enhance prompt with verification rules
+      const prompt = enhancePromptWithVerificationRules(basePrompt, 'lesson-plan');
+
       const response = await ai.models.generateContentStream({
-        model: 'gemini-2.5-flash',
+        model: model,
         contents: prompt,
       });
 
+      // Process streaming with verification
       for await (const chunk of response) {
+        verification.processChunk(chunk.text);
         setGeneratedPlan((prev) => prev + chunk.text);
       }
+      
+      // Finalize and verify complete content
+      const verificationResult = await verification.finalizeStream();
+      
+      if (verificationResult.fixes.length > 0) {
+        console.info('✅ Applied automatic fixes:', verificationResult.fixes);
+        setGeneratedPlan(verificationResult.correctedContent);
+      }
+      
+      if (verificationResult.issues.length > 0) {
+        console.warn('⚠️ Content issues detected:', verificationResult.issues);
+      }
+      
     } catch (error) {
       console.error(error);
       setGeneratedPlan("Error generating plan.");
@@ -259,6 +299,18 @@ const LessonPlanGenerator: React.FC<Props> = ({ onBack }) => {
              </div>
           </div>
         )}
+        
+        {/* Verification Status Badge */}
+        {verification.verificationState.lastVerification && (
+          <div className="bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg p-3">
+            <VerificationBadge 
+              verificationState={verification.verificationState} 
+              showDetails={true}
+              compact={false}
+            />
+          </div>
+        )}
+        
         <div className="space-y-4">
            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b pb-2">Lesson Details</h3>
            <div className="flex flex-col">

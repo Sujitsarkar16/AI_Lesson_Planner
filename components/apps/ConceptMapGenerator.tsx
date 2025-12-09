@@ -3,6 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import GeneratorLayout from '../GeneratorLayout';
 import { LessonPlan } from '../../types';
 import ReactFlowRenderer from '../ReactFlowRenderer';
+import { getUserApiKey, getUserModel } from '../../utils/apiKeyManager';
 import { getSettings } from '../../settings';
 
 interface Props {
@@ -49,8 +50,10 @@ const ConceptMapGenerator: React.FC<Props> = ({ onBack }) => {
     setFlowData(null);
 
     try {
-      if (!process.env.API_KEY) throw new Error("API Key missing");
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = getUserApiKey();
+      const model = getUserModel();
+      if (!apiKey) throw new Error("Please add your Google Gemini API key in Settings");
+      const ai = new GoogleGenAI({ apiKey });
 
       const prompt = `
         Generate a concept map for the topic: "${topic}".
@@ -77,7 +80,7 @@ const ConceptMapGenerator: React.FC<Props> = ({ onBack }) => {
       `;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: model,
         contents: prompt,
         config: {
           responseMimeType: "application/json",

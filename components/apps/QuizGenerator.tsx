@@ -6,6 +6,7 @@ import { LessonPlan } from '../../types';
 import { TEMPLATES } from '../../data/templates';
 import DynamicPreview from '../DynamicPreview';
 import { getSettings } from '../../settings';
+import { getUserApiKey, getUserModel } from '../../utils/apiKeyManager';
 
 interface Props {
   onBack: () => void;
@@ -50,8 +51,10 @@ const QuizGenerator: React.FC<Props> = ({ onBack }) => {
     setIsSaved(false);
 
     try {
-      if (!process.env.API_KEY) throw new Error("API Key missing");
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = getUserApiKey();
+      const model = getUserModel();
+      if (!apiKey) throw new Error("Please add your Google Gemini API key in Settings");
+      const ai = new GoogleGenAI({ apiKey });
       const prompt = `Create a Quiz. Subject: ${subject}, Topic: ${topic}, Questions: ${numQuestions}, Difficulty: ${difficulty}.
         
         TEMPLATE INSTRUCTIONS: ${activeTemplate ? activeTemplate.context : 'Strictly follow the table format below.'}
@@ -70,7 +73,7 @@ const QuizGenerator: React.FC<Props> = ({ onBack }) => {
         `;
 
       const response = await ai.models.generateContentStream({
-        model: 'gemini-2.5-flash',
+        model: model,
         contents: prompt,
       });
 

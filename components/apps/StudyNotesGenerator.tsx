@@ -8,6 +8,11 @@ import { LessonPlan } from '../../types';
 import { TEMPLATES } from '../../data/templates';
 import DynamicPreview from '../DynamicPreview';
 import { getSettings } from '../../settings';
+import { getMermaidPromptSuffix } from '../../utils/mermaidPrompts';
+import { useStreamingVerification } from '../../utils/useVerification';
+import { enhancePromptWithVerificationRules } from '../../utils/verificationAgent';
+import { getUserApiKey, getUserModel } from '../../utils/apiKeyManager';
+import VerificationBadge from '../VerificationBadge';
 
 interface Props {
   onBack: () => void;
@@ -39,6 +44,20 @@ const StudyNotesGenerator: React.FC<Props> = ({ onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [generatedContent, setGeneratedContent] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  
+  // Verification Agent Integration
+  const apiKey = getUserApiKey();
+  const verification = useStreamingVerification(
+    apiKey,
+    {
+      enabled: true,
+      verifyMermaid: includes.includes('Diagrams'),
+      verifyCode: true,
+      verifyMarkdown: true,
+      autoFix: true,
+      showWarnings: true
+    }
+  );
 
   useEffect(() => {
     // Load Settings
@@ -61,12 +80,15 @@ const StudyNotesGenerator: React.FC<Props> = ({ onBack }) => {
     setIsLoading(true);
     setGeneratedContent('');
     setIsSaved(false);
+    verification.resetStream();
 
     try {
-      if (!process.env.API_KEY) throw new Error("API Key missing");
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = getUserApiKey();
+      const model = getUserModel();
+      if (!apiKey) throw new Error("Please add your Google Gemini API key in Settings");
+      const ai = new GoogleGenAI({ apiKey });
       
-      const prompt = `
+      const basePrompt = `
 GENERATE NOTES REQUEST
 ----------------------
 Subject: ${subject}
@@ -95,7 +117,7 @@ OUTPUT REQUIREMENTS (strict)
    - Core Content (divided into clear sub-sections H2/H3)
    - Important Formulas / Definitions / Key Terms (boxed list/table)
    - Worked Examples (if requested/relevant) with step-by-step solutions
-   - Diagrams (if requested) — for diagrams, use MermaidJS syntax inside a mermaid code block (\`\`\`mermaid ... \`\`\`).
+   - Diagrams (if requested) — Use MermaidJS ONLY for diagrams.
    - Key Takeaways / Summary
    - Practice Questions (if requested) with answers in a collapsible/separate section
    - Mnemonics / Memory Aids (if requested)
@@ -104,16 +126,36 @@ OUTPUT REQUIREMENTS (strict)
 5. Align language to ${board} ${grade} standards.
 6. If "Revision" or "Exam-oriented", include a "Quick Revision Sheet" at the top.
 7. Include "How to use these notes" section for ${audience}.
+
+${includes.includes('Diagrams') ? getMermaidPromptSuffix('concept') : ''}
 `;
 
+      // Enhance prompt with verification rules
+      const prompt = enhancePromptWithVerificationRules(basePrompt, 'study-notes');
+
       const response = await ai.models.generateContentStream({
-        model: 'gemini-2.5-flash',
+        model: model,
         contents: prompt,
       });
 
+      // Process streaming with verification
       for await (const chunk of response) {
+        verification.processChunk(chunk.text);
         setGeneratedContent((prev) => prev + chunk.text);
       }
+      
+      // Finalize and verify complete content
+      const verificationResult = await verification.finalizeStream();
+      
+      if (verificationResult.fixes.length > 0) {
+        console.info('✅ Applied automatic fixes:', verificationResult.fixes);
+        setGeneratedContent(verificationResult.correctedContent);
+      }
+      
+      if (verificationResult.issues.length > 0) {
+        console.warn('⚠️ Content issues detected:', verificationResult.issues);
+      }
+      
     } catch (error) {
       console.error(error);
       setGeneratedContent("Error generating notes. Please check your API key and try again.");
@@ -182,6 +224,34 @@ OUTPUT REQUIREMENTS (strict)
                 <p className="text-sm font-bold text-primary">Using Template: {activeTemplate.title}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Notes will follow this style.</p>
              </div>
+          </div>
+        )}
+        
+        {/* Verification Status Badge */}
+        {verification.verificationState.lastVerification && (
+          <div className="bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg p-3">
+            <VerificationBadge 
+              verificationState={verification.verificationState} 
+              showDetails={true}
+              compact={false}
+            />
+          </div>
+        )}
+        
+        {/* Real-time Warnings */}
+        {verification.warnings.length > 0 && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+            <div className="flex items-start gap-2 text-sm text-yellow-800 dark:text-yellow-200">
+              <span className="material-symbols-outlined text-lg">info</span>
+              <div>
+                <p className="font-bold mb-1">Real-time Warnings:</p>
+                <ul className="text-xs space-y-1">
+                  {verification.warnings.slice(0, 3).map((warning, idx) => (
+                    <li key={idx}>• {warning}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
         )}
         

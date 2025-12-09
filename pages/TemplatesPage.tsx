@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { TEMPLATES } from '../data/templates';
 import { AppType, Template } from '../types';
 import { GoogleGenAI } from "@google/genai";
+import { getUserApiKey } from '../utils/apiKeyManager';
 
 const TemplatesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppType>('lesson-plan');
@@ -46,8 +47,9 @@ const TemplatesPage: React.FC = () => {
     setLoadingImage(template.id);
     
     try {
-      if (!process.env.API_KEY) throw new Error("API Key missing");
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = getUserApiKey();
+      if (!apiKey) throw new Error("Please add your Google Gemini API key in Settings");
+      const ai = new GoogleGenAI({ apiKey });
       
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',

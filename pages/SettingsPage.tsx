@@ -1,11 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { UserSettings, getSettings, saveSettings } from '../settings';
+import { validateApiKey, GEMINI_MODELS } from '../utils/apiKeyManager';
 
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<UserSettings>(getSettings());
   const [isSaved, setIsSaved] = useState(false);
   const [docCount, setDocCount] = useState(0);
+  const [isValidatingKey, setIsValidatingKey] = useState(false);
+  const [keyValidation, setKeyValidation] = useState<{ isValid: boolean; message: string } | null>(null);
 
   useEffect(() => {
     // Load doc count for the danger zone
@@ -16,6 +19,44 @@ const SettingsPage: React.FC = () => {
   const handleChange = (field: keyof UserSettings, value: string) => {
     setSettings(prev => ({ ...prev, [field]: value }));
     setIsSaved(false);
+    
+    // Reset validation when API key changes
+    if (field === 'geminiApiKey') {
+      setKeyValidation(null);
+    }
+  };
+
+  const handleValidateKey = async () => {
+    if (!settings.geminiApiKey) {
+      setKeyValidation({ isValid: false, message: 'Please enter an API key first' });
+      return;
+    }
+
+    setIsValidatingKey(true);
+    setKeyValidation(null);
+
+    try {
+      const result = await validateApiKey(settings.geminiApiKey);
+      
+      if (result.isValid) {
+        setKeyValidation({ 
+          isValid: true, 
+          message: '✅ API key is valid and working!' 
+        });
+      } else {
+        setKeyValidation({ 
+          isValid: false, 
+          message: result.error || 'Invalid API key' 
+        });
+      }
+    } catch (error) {
+      setKeyValidation({ 
+        isValid: false, 
+        message: 'Failed to validate API key. Please check your internet connection.' 
+      });
+    } finally {
+      setIsValidatingKey(false);
+    }
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -81,6 +122,105 @@ const SettingsPage: React.FC = () => {
                     className="rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-0 focus:border-black p-3 font-medium transition-colors" 
                     placeholder="e.g. Springfield High School"
                   />
+              </div>
+           </div>
+        </section>
+
+        {/* API Configuration Section */}
+        <section className="bg-white dark:bg-[#1e293b] rounded-2xl border-2 border-black p-8 shadow-neo">
+           <div className="flex items-center gap-4 mb-8 pb-4 border-b-2 border-slate-100 dark:border-slate-700">
+              <div className="p-3 bg-brand-green border-2 border-black text-black rounded-xl shadow-neo-sm">
+                <span className="material-symbols-outlined text-2xl">key</span>
+              </div>
+              <div>
+                <h2 className="text-2xl font-black font-display text-slate-900 dark:text-white">API Configuration</h2>
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400">Add your Google Gemini API key to enable AI generation.</p>
+              </div>
+           </div>
+           
+           <div className="flex flex-col gap-6">
+              {/* API Key Input */}
+              <div className="flex flex-col">
+                 <label className="text-sm font-black text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wide">Google Gemini API Key</label>
+                 <div className="flex gap-3">
+                   <input 
+                      type="password" 
+                      value={settings.geminiApiKey} 
+                      onChange={(e) => handleChange('geminiApiKey', e.target.value)}
+                      className="flex-1 rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-0 focus:border-black p-3 font-mono text-sm transition-colors" 
+                      placeholder="AIza...your-api-key-here"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleValidateKey}
+                      disabled={isValidatingKey || !settings.geminiApiKey}
+                      className="px-6 py-3 rounded-xl border-2 border-black bg-brand-blue text-white font-bold hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-neo-sm hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] whitespace-nowrap"
+                    >
+                      {isValidatingKey ? (
+                        <span className="flex items-center gap-2">
+                          <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                          Validating...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <span className="material-symbols-outlined">verified</span>
+                          Validate
+                        </span>
+                      )}
+                    </button>
+                 </div>
+                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">
+                   Get your free API key from{' '}
+                   <a 
+                     href="https://aistudio.google.com/app/apikey" 
+                     target="_blank" 
+                     rel="noopener noreferrer"
+                     className="text-brand-blue hover:underline font-bold"
+                   >
+                     Google AI Studio →
+                   </a>
+                 </p>
+
+                 {/* Validation Message */}
+                 {keyValidation && (
+                   <div className={`mt-3 p-3 rounded-xl border-2 flex items-start gap-2 ${
+                     keyValidation.isValid 
+                       ? 'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-700' 
+                       : 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-700'
+                   }`}>
+                     <span className={`material-symbols-outlined ${
+                       keyValidation.isValid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                     }`}>
+                       {keyValidation.isValid ? 'check_circle' : 'error'}
+                     </span>
+                     <p className={`text-sm font-bold ${
+                       keyValidation.isValid 
+                         ? 'text-green-800 dark:text-green-300' 
+                         : 'text-red-800 dark:text-red-300'
+                     }`}>
+                       {keyValidation.message}
+                     </p>
+                   </div>
+                 )}
+              </div>
+
+              {/* Model Selection */}
+              <div className="flex flex-col">
+                 <label className="text-sm font-black text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wide">Gemini Model</label>
+                 <select
+                    value={settings.geminiModel}
+                    onChange={(e) => handleChange('geminiModel', e.target.value)}
+                    className="rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-0 focus:border-black p-3 font-medium transition-colors cursor-pointer"
+                 >
+                   {GEMINI_MODELS.filter(m => !m.id.includes('image')).map(model => (
+                     <option key={model.id} value={model.id}>
+                       {model.name} - {model.description}
+                     </option>
+                   ))}
+                 </select>
+                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">
+                   Select the AI model to use for content generation. Faster models respond quicker, while Pro models provide more detailed outputs.
+                 </p>
               </div>
            </div>
         </section>

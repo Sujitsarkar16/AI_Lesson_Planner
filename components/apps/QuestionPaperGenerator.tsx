@@ -5,6 +5,7 @@ import GeneratorLayout from '../GeneratorLayout';
 import { LessonPlan } from '../../types';
 import { TEMPLATES } from '../../data/templates';
 import DynamicPreview from '../DynamicPreview';
+import { getUserApiKey, getUserModel } from '../../utils/apiKeyManager';
 
 interface Props {
   onBack: () => void;
@@ -47,8 +48,10 @@ const QuestionPaperGenerator: React.FC<Props> = ({ onBack }) => {
     setIsSaved(false);
 
     try {
-      if (!process.env.API_KEY) throw new Error("API Key missing");
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = getUserApiKey();
+      const model = getUserModel();
+      if (!apiKey) throw new Error("Please add your Google Gemini API key in Settings");
+      const ai = new GoogleGenAI({ apiKey });
       let prompt = `Create a formal Question Paper. Subject: ${subject}. Topics: ${topics}.
       
         TEMPLATE INSTRUCTIONS: ${activeTemplate ? activeTemplate.context : 'Standard structure required.'}
@@ -57,7 +60,7 @@ const QuestionPaperGenerator: React.FC<Props> = ({ onBack }) => {
         Format: Clean Markdown. Number questions continuously.`;
 
       const response = await ai.models.generateContentStream({
-        model: 'gemini-2.5-flash',
+        model: model,
         contents: prompt,
       });
 
@@ -73,7 +76,12 @@ const QuestionPaperGenerator: React.FC<Props> = ({ onBack }) => {
   };
 
   const handleSave = () => {
-    const fullContent = `QCode: ${qpCode}\n# ${examName}\n## ${semester}\n### ${courseName}\n---\n${generatedContent}`;
+    const fullContent = `QCode: ${qpCode}
+# ${examName}
+## ${semester}
+### ${courseName}
+---
+${generatedContent}`;
     const metadata = {
        examName: examName,
        subtitle: semester,

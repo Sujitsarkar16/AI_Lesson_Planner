@@ -5,6 +5,10 @@ import GeneratorLayout from '../GeneratorLayout';
 import { LessonPlan } from '../../types';
 import { TEMPLATES } from '../../data/templates';
 import DynamicPreview from '../DynamicPreview';
+import { useStreamingVerification } from '../../utils/useVerification';
+import { enhancePromptWithVerificationRules } from '../../utils/verificationAgent';
+import { getUserApiKey, getUserModel } from '../../utils/apiKeyManager';
+import VerificationBadge from '../VerificationBadge';
 
 interface Props {
   onBack: () => void;
@@ -35,6 +39,20 @@ const SyllabusGenerator: React.FC<Props> = ({ onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [generatedContent, setGeneratedContent] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  
+  // Verification Agent Integration
+  const apiKey = getUserApiKey();
+  const verification = useStreamingVerification(
+    apiKey,
+    {
+      enabled: true,
+      verifyMermaid: false,  // Syllabus rarely has diagrams
+      verifyCode: false,
+      verifyMarkdown: true,
+      autoFix: true,
+      showWarnings: true
+    }
+  );
 
   useEffect(() => {
     const templateId = localStorage.getItem('selected_template_syllabus');
@@ -51,12 +69,15 @@ const SyllabusGenerator: React.FC<Props> = ({ onBack }) => {
     setIsLoading(true);
     setGeneratedContent('');
     setIsSaved(false);
+    verification.resetStream();
 
     try {
-      if (!process.env.API_KEY) throw new Error("API Key missing");
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = getUserApiKey();
+      const model = getUserModel();
+      if (!apiKey) throw new Error("Please add your Google Gemini API key in Settings");
+      const ai = new GoogleGenAI({ apiKey });
       
-      const prompt = `Create a comprehensive Course Syllabus.
+      const basePrompt = `Create a comprehensive Course Syllabus.
         Course Title: ${courseTitle}
         Course Code: ${courseCode}
         Subject/Dept: ${subject}
@@ -86,14 +107,32 @@ const SyllabusGenerator: React.FC<Props> = ({ onBack }) => {
         
         Format: Professional Markdown. Use H2 (##) for section titles.`;
 
+      // Enhance prompt with verification rules
+      const prompt = enhancePromptWithVerificationRules(basePrompt, 'lesson-plan');
+
       const response = await ai.models.generateContentStream({
-        model: 'gemini-2.5-flash',
+        model: model,
         contents: prompt,
       });
 
+      // Process streaming with verification
       for await (const chunk of response) {
+        verification.processChunk(chunk.text);
         setGeneratedContent((prev) => prev + chunk.text);
       }
+      
+      // Finalize and verify complete content
+      const verificationResult = await verification.finalizeStream();
+      
+      if (verificationResult.fixes.length > 0) {
+        console.info('✅ Applied automatic fixes:', verificationResult.fixes);
+        setGeneratedContent(verificationResult.correctedContent);
+      }
+      
+      if (verificationResult.issues.length > 0) {
+        console.warn('⚠️ Content issues detected:', verificationResult.issues);
+      }
+      
     } catch (error) {
       console.error(error);
       setGeneratedContent("Error generating syllabus.");
@@ -169,6 +208,17 @@ const SyllabusGenerator: React.FC<Props> = ({ onBack }) => {
                 <p className="text-sm font-bold text-primary">Using Template: {activeTemplate.title}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Structure adjusted for this template.</p>
              </div>
+          </div>
+        )}
+        
+        {/* Verification Status Badge */}
+        {verification.verificationState.lastVerification && (
+          <div className="bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg p-3">
+            <VerificationBadge 
+              verificationState={verification.verificationState} 
+              showDetails={true}
+              compact={false}
+            />
           </div>
         )}
 
