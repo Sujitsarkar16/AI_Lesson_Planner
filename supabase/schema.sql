@@ -83,6 +83,11 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- Drop existing triggers if they exist before recreating
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+DROP TRIGGER IF EXISTS update_documents_updated_at ON documents;
+DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON subscriptions;
+
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -97,6 +102,17 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usage_logs ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own profile" ON users;
+DROP POLICY IF EXISTS "Users can update own profile" ON users;
+DROP POLICY IF EXISTS "Users can view own documents" ON documents;
+DROP POLICY IF EXISTS "Users can insert own documents" ON documents;
+DROP POLICY IF EXISTS "Users can update own documents" ON documents;
+DROP POLICY IF EXISTS "Users can delete own documents" ON documents;
+DROP POLICY IF EXISTS "Users can view own subscriptions" ON subscriptions;
+DROP POLICY IF EXISTS "Users can view own usage logs" ON usage_logs;
+DROP POLICY IF EXISTS "Users can insert own usage logs" ON usage_logs;
 
 -- Users can only read their own data
 CREATE POLICY "Users can view own profile" ON users
@@ -232,6 +248,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Schedule the cleanup function to run daily at 2 AM UTC
 -- This uses pg_cron to automatically delete old documents
+-- Drop existing cron job if it exists
+SELECT cron.unschedule('delete-old-documents-daily') WHERE EXISTS (
+  SELECT 1 FROM cron.job WHERE jobname = 'delete-old-documents-daily'
+);
+
+-- Create the cron schedule
 SELECT cron.schedule(
   'delete-old-documents-daily',  -- Job name
   '0 2 * * *',                   -- Cron expression: Daily at 2:00 AM UTC
