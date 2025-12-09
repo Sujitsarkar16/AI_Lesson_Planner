@@ -109,9 +109,9 @@ const DashboardLayout: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex w-full flex-1 flex-col overflow-y-auto bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:20px_20px] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)]">
+      <main className="flex w-full flex-1 flex-col overflow-hidden bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:20px_20px] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)]">
         {/* TopNavBar */}
-        <header className="flex items-center justify-end whitespace-nowrap px-8 py-4 sticky top-0 z-10 pointer-events-none">
+        <header className="flex items-center justify-end whitespace-nowrap px-8 py-4 z-10 pointer-events-none flex-shrink-0">
           <div className="flex flex-1 justify-end gap-4 pointer-events-auto">
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
@@ -121,7 +121,7 @@ const DashboardLayout: React.FC = () => {
             </button>
           </div>
         </header>
-        <div className="px-8 pb-8 lg:px-12 lg:pb-12 flex-1">
+        <div className="px-8 pb-8 lg:px-12 lg:pb-12 flex-1 overflow-y-auto">
           <Outlet />
         </div>
       </main>

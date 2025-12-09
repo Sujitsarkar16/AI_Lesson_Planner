@@ -83,9 +83,9 @@ const GeneratorLayout: React.FC<GeneratorLayoutProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-[calc(100vh-12rem)]">
       {/* Header */}
-      <div className="flex flex-col gap-4 mb-6">
+      <div className="flex flex-col gap-4 mb-6 flex-shrink-0">
         <div className="flex items-center gap-2 text-slate-500 dark:text-[#94a3b8] font-bold text-sm">
           <button onClick={onBack} className="hover:text-black dark:hover:text-white hover:underline uppercase tracking-wide">Tools</button>
           <span>/</span>
@@ -99,14 +99,14 @@ const GeneratorLayout: React.FC<GeneratorLayoutProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 min-h-0">
         {/* Left Column: Form */}
-        <div className="bg-white dark:bg-[#1e293b] p-6 rounded-2xl shadow-neo border-2 border-black h-fit overflow-y-auto">
+        <div className="bg-white dark:bg-[#1e293b] p-6 rounded-2xl shadow-neo border-2 border-black overflow-y-auto">
           {children}
         </div>
 
         {/* Right Column: Preview */}
-        <div className="flex flex-col h-full overflow-hidden rounded-2xl border-2 border-black bg-white dark:bg-[#1e293b] shadow-neo">
+        <div className="flex flex-col overflow-hidden rounded-2xl border-2 border-black bg-white dark:bg-[#1e293b] shadow-neo">
           <div className="flex items-center justify-between border-b-2 border-black px-6 py-4 bg-slate-50 dark:bg-[#1e293b]">
              <div className="flex items-center gap-2">
                 <span className="relative flex h-3 w-3">
