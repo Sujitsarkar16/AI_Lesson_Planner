@@ -29,6 +29,7 @@ const LessonSequenceGenerator: React.FC<Props> = ({ onBack }) => {
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null);
   const [generatedLessons, setGeneratedLessons] = useState<Array<{ topic: string, content: string }>>([]);
   const [currentLessonIndex, setCurrentLessonIndex] = useState(-1);
   const [isSaved, setIsSaved] = useState(false);
@@ -83,6 +84,7 @@ const LessonSequenceGenerator: React.FC<Props> = ({ onBack }) => {
     }
 
     setIsGenerating(true);
+    setGenerationStatus('queued');
     setGeneratedLessons([]);
     setCurrentLessonIndex(-1);
 
@@ -103,7 +105,8 @@ const LessonSequenceGenerator: React.FC<Props> = ({ onBack }) => {
           title: `Lesson ${i + 1}: ${node.data.label}`,
           duration,
           curriculumBoard: board,
-          learningObjectives: `Students will understand ${node.data.label} and its relationships in ${subject}.`
+          learningObjectives: `Students will understand ${node.data.label} and its relationships in ${subject}.`,
+          onStatus: setGenerationStatus
         });
 
         for await (const chunk of stream) {
@@ -273,6 +276,7 @@ const LessonSequenceGenerator: React.FC<Props> = ({ onBack }) => {
       icon="format_list_numbered"
       generatedContent={''}
       isLoading={isGenerating}
+      jobStatus={generationStatus}
       onBack={onBack}
       onSave={handleSave}
       isSaved={isSaved}

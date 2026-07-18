@@ -1,210 +1,29 @@
-/**
- * Export Modal Component
- * Allows users to export documents to PDF or DOCX format
- */
-
 import React, { useState } from 'react';
+import { ApiRequestError } from '@/shared/api/apiClient';
 import { LessonPlan } from '@/shared/types/document';
-import { exportToPDF } from '@/modules/documents/exports/pdfExport';
-import { exportToDOCX } from '@/modules/documents/exports/docxExport';
+import { DocumentService, type ExportJob } from './documentService';
 
-type SubscriptionTier = 'free' | 'pro' | 'school';
+interface ExportModalProps { isOpen: boolean; onClose: () => void; document: LessonPlan; }
+const statusMessage: Record<ExportJob['status'], string> = { queued: 'Queued for secure export…', retrying: 'Retrying export…', completed: 'Export ready.', failed: 'Export failed.' };
 
-interface ExportModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  document: LessonPlan;
-  userTier?: SubscriptionTier;
-}
-
-const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, document, userTier = 'free' }) => {
+const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, document: exportDocument }) => {
   const [format, setFormat] = useState<'pdf' | 'docx'>('pdf');
-  const [isExporting, setIsExporting] = useState(false);
-  const [includeBranding, setIncludeBranding] = useState(true);
-  const [customFooter, setCustomFooter] = useState('');
-
+  const [status, setStatus] = useState<ExportJob['status'] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   if (!isOpen) return null;
-
-  const isPro = userTier === 'pro' || userTier === 'school';
-
   const handleExport = async () => {
-    console.log('🚀 Export started', { format, document, isPro });
-    setIsExporting(true);
-
+    setError(null);
     try {
-      const options = {
-        includeBranding: includeBranding,
-        watermark: !isPro ? 'FREE TIER' : undefined,
-        footerText: customFooter || undefined
-      };
-
-      console.log('📦 Export options:', options);
-
-      if (format === 'pdf') {
-        console.log('📄 Exporting to PDF...');
-        const blob = await exportToPDF(document, options, true);
-        console.log('✅ PDF export successful', blob);
-      } else {
-        console.log('📝 Exporting to DOCX...');
-        const blob = await exportToDOCX(document, options, true);
-        console.log('✅ DOCX export successful', blob);
-      }
-
-      // Close modal after successful export
-      setTimeout(() => {
-        onClose();
-        setIsExporting(false);
-      }, 500);
-    } catch (error) {
-      console.error('❌ Export error:', error);
-      alert(`Failed to export document: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setIsExporting(false);
+      const completed = await DocumentService.pollExportJob(await DocumentService.requestExport(exportDocument.id, format), setStatus);
+      if (completed.status === 'failed') throw new Error(completed.error || 'The server could not create this export.');
+      if (!completed.artifactId) throw new Error('The export completed without a download artifact.');
+      const { blob, filename } = await DocumentService.downloadExport(completed.artifactId);
+      const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = filename || `${exportDocument.title}.${format}`; link.click(); URL.revokeObjectURL(url);
+    } catch (requestError) {
+      setError(requestError instanceof ApiRequestError ? requestError.message : requestError instanceof Error ? requestError.message : 'Could not request an export.');
+      setStatus(null);
     }
   };
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-[#1e293b] rounded-2xl border-2 border-black shadow-neo-lg max-w-lg w-full overflow-hidden">
-        {/* Header */}
-        <div className="bg-brand-blue border-b-2 border-black px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black font-display text-white">Export Document</h2>
-            <button
-              onClick={onClose}
-              className="text-white hover:text-gray-200 transition-colors"
-            >
-              <span className="material-symbols-outlined text-3xl">close</span>
-            </button>
-          </div>
-          <p className="text-white/80 text-sm font-medium mt-1">{document.title}</p>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Format Selection */}
-          <div>
-            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">
-              Export Format
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setFormat('pdf')}
-                className={`p-4 rounded-xl border-2 border-black transition-all ${
-                  format === 'pdf'
-                    ? 'bg-brand-blue text-white shadow-neo'
-                    : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white hover:shadow-neo-sm'
-                }`}
-              >
-                <span className="material-symbols-outlined text-4xl mb-2">picture_as_pdf</span>
-                <div className="font-black text-sm">PDF</div>
-                <div className="text-xs opacity-80">Portable Document</div>
-              </button>
-              
-              <button
-                onClick={() => setFormat('docx')}
-                className={`p-4 rounded-xl border-2 border-black transition-all ${
-                  format === 'docx'
-                    ? 'bg-brand-blue text-white shadow-neo'
-                    : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white hover:shadow-neo-sm'
-                } ${!isPro ? 'opacity-50 cursor-not-allowed' : ''}`}
-                disabled={!isPro}
-              >
-                <span className="material-symbols-outlined text-4xl mb-2">description</span>
-                <div className="font-black text-sm">DOCX</div>
-                <div className="text-xs opacity-80">
-                  {isPro ? 'Microsoft Word' : '🔒 Pro Only'}
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Options */}
-          <div className="space-y-3">
-            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Export Options
-            </label>
-
-            {/* Branding */}
-            <label className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-black cursor-pointer hover:shadow-neo-sm transition-all">
-              <input
-                type="checkbox"
-                checked={includeBranding}
-                onChange={(e) => setIncludeBranding(e.target.checked)}
-                className="w-5 h-5 rounded border-2 border-black"
-              />
-              <div className="flex-1">
-                <div className="font-bold text-sm text-slate-900 dark:text-white">
-                  Include Branding
-                </div>
-                <div className="text-xs text-slate-600 dark:text-slate-400">
-                  Add "Generated by curriculamIQ" footer
-                </div>
-              </div>
-            </label>
-
-            {/* Custom Footer (Pro Only) */}
-            <div className={`${!isPro ? 'opacity-50' : ''}`}>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">
-                Custom Footer Text {!isPro && '(Pro Only)'}
-              </label>
-              <input
-                type="text"
-                value={customFooter}
-                onChange={(e) => setCustomFooter(e.target.value)}
-                disabled={!isPro}
-                placeholder="e.g., Your School Name"
-                className="w-full px-4 py-2 rounded-xl border-2 border-black bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-brand-blue disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* Watermark Notice (Free Tier) */}
-            {!isPro && (
-              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-400 dark:border-yellow-600 rounded-xl">
-                <div className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-500">info</span>
-                  <div className="flex-1">
-                    <div className="text-xs font-bold text-yellow-800 dark:text-yellow-300">
-                      Free Tier Notice
-                    </div>
-                    <div className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
-                      Exports will include a "FREE TIER" watermark. Upgrade to Pro to remove watermarks and unlock DOCX export.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="border-t-2 border-black px-6 py-4 bg-slate-50 dark:bg-slate-800/50 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-3 rounded-xl border-2 border-black bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-bold shadow-neo hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleExport}
-            disabled={isExporting || (!isPro && format === 'docx')}
-            className="flex-1 px-4 py-3 rounded-xl border-2 border-black bg-brand-blue text-white font-bold shadow-neo hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-neo"
-          >
-            {isExporting ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin material-symbols-outlined">progress_activity</span>
-                Exporting...
-              </span>
-            ) : (
-              <span className="flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined">download</span>
-                Export {format.toUpperCase()}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" role="presentation"><div role="dialog" aria-modal="true" aria-labelledby="export-title" className="w-full max-w-lg overflow-hidden rounded-2xl border-2 border-black bg-white shadow-neo-lg dark:bg-slate-800"><header className="flex items-center justify-between border-b-2 border-black bg-brand-blue px-6 py-4 text-white"><div><h2 id="export-title" className="text-2xl font-black font-display">Export document</h2><p className="mt-1 text-sm text-white/80">{exportDocument.title}</p></div><button type="button" aria-label="Close export dialog" onClick={onClose}><span className="material-symbols-outlined text-3xl">close</span></button></header><div className="space-y-4 p-6"><p className="text-sm text-slate-600 dark:text-slate-300">PDF and DOCX exports are created by the server. Availability is checked against your current plan when you request the export.</p><fieldset disabled={status === 'queued' || status === 'retrying'}><legend className="mb-3 text-sm font-bold">Export format</legend><div className="grid grid-cols-2 gap-3">{(['pdf', 'docx'] as const).map((value) => <label key={value} className={`cursor-pointer rounded-xl border-2 border-black p-4 text-center font-bold ${format === value ? 'bg-brand-blue text-white' : 'bg-slate-50 dark:bg-slate-700'}`}><input className="sr-only" type="radio" name="export-format" value={value} checked={format === value} onChange={() => setFormat(value)} />{value.toUpperCase()}</label>)}</div></fieldset>{status && <p role="status" aria-live="polite" className="rounded-lg bg-blue-50 p-3 text-sm font-bold text-blue-800">{statusMessage[status]}</p>}{error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-bold text-red-800">{error}</p>}</div><footer className="flex gap-3 border-t-2 border-black bg-slate-50 px-6 py-4 dark:bg-slate-900"><button type="button" onClick={onClose} className="flex-1 rounded-xl border-2 border-black bg-white px-4 py-3 font-bold text-slate-900">Cancel</button><button type="button" disabled={status === 'queued' || status === 'retrying'} onClick={() => void handleExport()} className="flex-1 rounded-xl border-2 border-black bg-brand-blue px-4 py-3 font-bold text-white disabled:opacity-50">{status ? statusMessage[status] : `Request ${format.toUpperCase()} export`}</button></footer></div></div>;
 };
-
 export default ExportModal;

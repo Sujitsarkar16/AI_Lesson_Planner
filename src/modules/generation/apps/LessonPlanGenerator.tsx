@@ -58,6 +58,7 @@ const LessonPlanGenerator: React.FC<Props> = ({ onBack }) => {
   const [generatorConfig, setGeneratorConfig] = useState<GeneratorConfig>(DEFAULT_GENERATOR_CONFIG);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState('');
   const [isSaved, setIsSaved] = useState(false);
 
@@ -120,6 +121,7 @@ const LessonPlanGenerator: React.FC<Props> = ({ onBack }) => {
     };
 
     setIsLoading(true);
+    setGenerationStatus('queued');
     setGeneratedPlan('');
     setIsSaved(false);
     verification.resetStream();
@@ -150,7 +152,8 @@ const LessonPlanGenerator: React.FC<Props> = ({ onBack }) => {
                 availableTime: Number.parseInt(duration, 10) || 60
               }
             }
-          : undefined
+          : undefined,
+        onStatus: setGenerationStatus
       });
 
       // Process streaming with verification
@@ -251,6 +254,7 @@ const LessonPlanGenerator: React.FC<Props> = ({ onBack }) => {
         generatedContent={generatedPlan}
         onContentChange={setGeneratedPlan}
         isLoading={isLoading}
+        jobStatus={generationStatus}
         onBack={onBack}
         onSave={handleSave}
         isSaved={isSaved}

@@ -1,7 +1,7 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import type { ApiRequest } from './http.js';
 
-export type AuthenticatedUser = { auth0Id: string; email?: string; name?: string };
+export type AuthenticatedUser = { auth0Id: string; email?: string; name?: string; claims: Readonly<Record<string, unknown>> };
 
 export const requireAuth = async (req: ApiRequest): Promise<AuthenticatedUser> => {
   const header = req.headers.authorization;
@@ -19,6 +19,7 @@ export const requireAuth = async (req: ApiRequest): Promise<AuthenticatedUser> =
   return {
     auth0Id: payload.sub,
     email: typeof payload.email === 'string' ? payload.email : undefined,
-    name: typeof payload.name === 'string' ? payload.name : undefined
+    name: typeof payload.name === 'string' ? payload.name : undefined,
+    claims: payload as Record<string, unknown>
   };
 };

@@ -15,14 +15,6 @@ export interface UserProfile {
   updated_at: string;
 }
 
-export interface UsageLimit {
-  allowed: boolean;
-  current: number;
-  limit: number;
-  tier: 'free' | 'pro' | 'school';
-  reason?: string;
-}
-
 export const UserProfileService = {
   async getOrCreateUser(_auth0Id: string, email: string, name?: string): Promise<UserProfile | null> {
     try {
@@ -39,25 +31,6 @@ export const UserProfileService = {
     } catch (error) {
       console.error('Error fetching user profile:', error);
       return null;
-    }
-  },
-
-  async checkUsageLimit(_auth0Id: string): Promise<UsageLimit> {
-    try {
-      return await apiRequest<UsageLimit>('/usage/check', { method: 'POST' });
-    } catch (error) {
-      console.error('Error checking usage limit:', error);
-      return { allowed: false, current: 0, limit: 5, tier: 'free', reason: 'Error checking limit' };
-    }
-  },
-
-  async incrementUsage(_auth0Id: string): Promise<boolean> {
-    try {
-      await apiRequest('/usage/increment', { method: 'POST' });
-      return true;
-    } catch (error) {
-      console.error('Error incrementing usage:', error);
-      return false;
     }
   }
 };

@@ -5,6 +5,7 @@ import { useAuth } from "@/modules/auth/AuthContext";
 const navItems = [
   ["/dashboard", "dashboard", "Dashboard"],
   ["/dashboard/generate", "auto_awesome", "Generate new"],
+  ["/dashboard/calendar-optimization", "event_available", "Calendar optimizer"],
   ["/dashboard/documents", "folder_open", "My documents"],
   ["/dashboard/templates", "store", "Templates"],
   ["/dashboard/parent-communication", "email", "Parent comms"],
@@ -77,6 +78,10 @@ const DashboardLayout: React.FC = () => {
               </p>
             </div>
           </div>
+          <Link to="/dashboard/billing" className={navClass("/dashboard/billing")}>
+            <span className="material-symbols-outlined text-lg">credit_card</span>
+            Billing
+          </Link>
           <Link
             to="/dashboard/settings"
             className={navClass("/dashboard/settings")}

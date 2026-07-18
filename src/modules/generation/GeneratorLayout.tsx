@@ -13,6 +13,7 @@ interface GeneratorLayoutProps {
   isSaved: boolean;
   customPreview?: React.ReactNode;
   onContentChange?: (content: string) => void;
+  jobStatus?: string | null;
 }
 
 const GeneratorLayout: React.FC<GeneratorLayoutProps> = ({
@@ -25,7 +26,8 @@ const GeneratorLayout: React.FC<GeneratorLayoutProps> = ({
   onSave,
   isSaved,
   customPreview,
-  onContentChange
+  onContentChange,
+  jobStatus
 }) => {
   const outputContainerRef = useRef<HTMLDivElement>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -95,7 +97,7 @@ const GeneratorLayout: React.FC<GeneratorLayoutProps> = ({
           <div className="p-3 rounded-xl bg-brand-yellow border-2 border-black shadow-neo-sm text-black">
              <span className="material-symbols-outlined text-3xl">{icon}</span>
           </div>
-          <h1 className="text-4xl font-black font-display text-gray-900 dark:text-white">{title}</h1>
+          <div><h1 className="text-4xl font-black font-display text-gray-900 dark:text-white">{title}</h1>{jobStatus && <p role="status" aria-live="polite" className="mt-1 text-sm font-bold capitalize text-primary">Server job: {jobStatus}</p>}</div>
         </div>
       </div>
 

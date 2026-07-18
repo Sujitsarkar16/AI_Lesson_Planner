@@ -10,7 +10,15 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "db:setup": "node --env-file=.env scripts/setup-mongodb.mjs"
+    "db:setup": "node --env-file=.env scripts/setup-mongodb.mjs",
+    "db:setup-roles": "node --env-file=.env scripts/setup-mongodb-roles.mjs",
+    "test:build": "tsc -p tsconfig.test.json",
+    "test:scheduler": "npm run test:build && node --test dist-test/modules/curriculum/calendarOptimization.test.js",
+    "test:integration": "npm run test:build && node --env-file=.env --test dist-test/modules/curriculum/calendarPlanStore.integration.test.js",
+    "test:billing": "npm run test:build && node --test dist-test/modules/billing/contracts.test.js dist-test/modules/billing/runtime.test.js dist-test/shared/config.test.js dist-test/shared/http.test.js",
+    "test:billing-foundations": "npm run test:billing",
+    "build:worker": "tsc -p tsconfig.worker.json",
+    "start:worker": "node --env-file=.env dist-worker/worker.js"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.9.0",
@@ -29,7 +37,8 @@
     "reactflow": "11.11.4",
     "rehype-highlight": "7",
     "rehype-raw": "7",
-    "remark-gfm": "4"
+    "remark-gfm": "4",
+    "stripe": "17.7.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

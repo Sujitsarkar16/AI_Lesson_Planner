@@ -219,11 +219,3 @@ export enum AuthMode {
   LOGIN = 'Log In',
   SIGNUP = 'Sign Up'
 }
-
-export interface UserSubscription {
-  tier: 'free' | 'pro' | 'school';
-  status: string;
-  currentPeriodEnd?: string;
-  usageCount: number;
-  usageLimit: number;
-}

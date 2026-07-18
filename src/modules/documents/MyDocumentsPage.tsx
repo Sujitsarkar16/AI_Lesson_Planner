@@ -12,7 +12,6 @@ import { useAuth } from '@/modules/auth/AuthContext';
 import { DocumentService } from '@/modules/documents/documentService';
 import { UserProfileService } from '@/modules/user/userProfileService';
 import { getSavedPlans, replaceSavedPlans } from '@/modules/documents/savedPlansStorage';
-import { calculateDocumentExpiry, formatTimeRemaining, getExpiryBadgeClasses, getExpiryWarningMessage } from '@/modules/documents/documentExpiry';
 import { exportLessonAsSlides } from '@/modules/documents/exports/slideExport';
 
 const MyDocumentsPage: React.FC = () => {
@@ -44,20 +43,16 @@ const MyDocumentsPage: React.FC = () => {
 
       const profile = await UserProfileService.getUserByAuth0Id(user.sub);
       if (!profile) {
-        setLocalPlans();
+        if (isCurrent) { setDatabaseUserId(null); setLocalPlanIds(new Set()); setPlans([]); }
         return;
       }
 
       await DocumentService.migrateLocalStorageData(profile.id);
-      const [documents, localPlans] = await Promise.all([
-        DocumentService.getDocuments(profile.id),
-        Promise.resolve(getSavedPlans())
-      ]);
-
+      const documents = await DocumentService.getDocuments(profile.id);
       if (isCurrent) {
         setDatabaseUserId(profile.id);
-        setLocalPlanIds(new Set(localPlans.map((plan) => plan.id)));
-        setPlans([...documents, ...localPlans]);
+        setLocalPlanIds(new Set());
+        setPlans(documents);
       }
     };
 
@@ -103,16 +98,7 @@ const MyDocumentsPage: React.FC = () => {
     <div className="flex flex-col gap-8 h-full">
       <div className="flex flex-col gap-2">
         <h1 className="text-4xl font-black font-display text-slate-900 dark:text-white">My Documents</h1>
-        <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">Manage and review your saved lesson plans, quizzes, and papers.</p>
-        <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-400 dark:border-yellow-600 rounded-xl flex items-start gap-2">
-          <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-500">schedule</span>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-yellow-800 dark:text-yellow-300">Auto-Deletion Policy</p>
-            <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
-              Documents are automatically deleted after 3 days. Export important documents to save them permanently.
-            </p>
-          </div>
-        </div>
+        <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">Manage documents returned by your account history. Free history includes the previous seven days; Pro history is unlimited.</p>
       </div>
 
       {plans.length === 0 ? (
@@ -128,9 +114,6 @@ const MyDocumentsPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
           {plans.map((plan) => {
             const style = getCardStyle(plan.type);
-            const expiry = calculateDocumentExpiry(plan.dateCreated);
-            const warningMessage = getExpiryWarningMessage(expiry);
-            
             return (
               <div 
                 key={plan.id} 
@@ -142,17 +125,7 @@ const MyDocumentsPage: React.FC = () => {
                      <span className={`px-2 py-1 rounded border-2 border-black text-xs font-black uppercase tracking-wide ${style.bg}`}>
                        {getDocumentTypeLabel(plan.type)}
                      </span>
-                     <span className={`px-2 py-1 rounded border-2 text-xs font-black flex items-center gap-1 ${getExpiryBadgeClasses(expiry.warningLevel)}`}>
-                       <span className="material-symbols-outlined text-xs">schedule</span>
-                       {formatTimeRemaining(expiry)}
-                     </span>
                   </div>
-                  
-                  {warningMessage && (
-                    <div className={`p-2 rounded-lg border-2 text-xs font-bold ${getExpiryBadgeClasses(expiry.warningLevel)}`}>
-                      {warningMessage}
-                    </div>
-                  )}
                   
                   <h3 className="text-xl font-black font-display text-slate-900 dark:text-white line-clamp-2 leading-tight group-hover:underline decoration-2 underline-offset-2">
                     {plan.title}
@@ -190,7 +163,6 @@ const MyDocumentsPage: React.FC = () => {
           isOpen={showExportModal}
           onClose={() => setShowExportModal(false)}
           document={selectedPlan}
-          userTier={user?.subscription_tier || 'free'}
         />
       )}
 

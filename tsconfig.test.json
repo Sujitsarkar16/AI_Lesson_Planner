@@ -1,0 +1,21 @@
+{
+  "//": "Narrowly scoped test build: emits only the calendar-optimization scheduler and persistence modules plus their node:test suites to dist-test/ (gitignored), so Node can run them with real module resolution. The app itself is bundler-resolved and never uses this config.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": false,
+    "noEmit": false,
+    "outDir": "dist-test",
+    "rootDir": "api/server",
+    "skipLibCheck": true
+  },
+  "include": [
+    "api/server/modules/curriculum/calendarOptimization.test.ts",
+    "api/server/modules/curriculum/calendarPlanStore.integration.test.ts",
+    "api/server/modules/billing/contracts.test.ts",
+    "api/server/modules/billing/runtime.test.ts",
+    "api/server/shared/config.test.ts",
+    "api/server/shared/http.test.ts"
+  ]
+}

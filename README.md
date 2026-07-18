@@ -61,6 +61,14 @@ scripts/             Development and data setup scripts
 ## Deployment
 The repository is configured for Vercel. Set the production environment variables in Vercel, including `VITE_APP_URL=https://curriculaiq.in`, then deploy with the configured build command: `npm run build`.
 
+### Billing MongoDB roles
+Provision three different runtime database users: the API (`MONGODB_URI`), continuous worker (`WORKER_MONGODB_URI`), and audit writer (`AUDIT_WRITER_MONGODB_URI`). `npm run db:setup` applies the billing collection validators and indexes with `MONGODB_ADMIN_URI` when present. `npm run db:setup-roles` is a provisioning-only command: it grants the documented per-collection permissions in `scripts/setup-mongodb-roles.mjs`, with `audit_records` limited to insert for every runtime role and no runtime role granted database-wide, index, validation, role, or user administration privileges. Never deploy `MONGODB_ADMIN_URI` or provisioning credentials to Vercel or the worker.
+
+### Stripe and worker operations
+Configure the Stripe test or live webhook to `https://<deployment>/api/webhooks/stripe` and subscribe only to `checkout.session.completed`, `customer.subscription.*`, `invoice.payment_succeeded`, and `invoice.payment_failed`. Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRO_PRICE_ID`, `AUTH0_ADMIN_CLAIM`, and `AUTH0_ADMIN_VALUE` only in the relevant server deployment; none belongs in a `VITE_` variable. Enable generation flags deliberately through the admin endpoint before exposing those operations.
+
+The worker is a separate continuously running Node 20 process, not a Vercel function: build it with `npm run build:worker` and run `npm run start:worker` with `WORKER_MONGODB_URI` supplied as its `MONGODB_URI`. It polls MongoDB at one-second precision for due work, refreshes metrics every five minutes, and removes expired export artifacts. Use a scheduler only for monitored recovery checks; Vercel Cron's one-minute cadence must never be used for the 1/5/30-second Gemini retries. Alert on rejected webhooks, rate-limit persistence failures, worker health/lease lag/backlog, terminal jobs, audit writer failures, and stale metric snapshots.
+
 ## Responsible use
 Use general teaching context only. Do not provide student names, identifiers, confidential records, or sensitive personal data. Review every generated draft for accuracy, accessibility, suitability, and curriculum alignment before sharing it.
 

@@ -10,9 +10,11 @@ import PricingPage from "@/modules/marketing/PricingPage";
 import AuthPage from "@/modules/auth/AuthPage";
 import DashboardPage from "@/modules/dashboard/DashboardPage";
 import GeneratePlanPage from "@/modules/generation/GeneratePlanPage";
+import CalendarOptimizationPage from "@/modules/curriculum/CalendarOptimizationPage";
 import MyDocumentsPage from "@/modules/documents/MyDocumentsPage";
 import TemplatesPage from "@/modules/templates/TemplatesPage";
 import SettingsPage from "@/modules/user/SettingsPage";
+import BillingPage from "@/modules/billing/BillingPage";
 import IntegrationsPage from "@/modules/user/IntegrationsPage";
 import StudentPortalPage from "@/modules/student/StudentPortalPage";
 import ParentCommunicationPage from "@/modules/parent/ParentCommunicationPage";
@@ -60,10 +62,12 @@ const AppRoutes: React.FC = () => (
       <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="generate" element={<GeneratePlanPage />} />
+        <Route path="calendar-optimization" element={<CalendarOptimizationPage />} />
         <Route path="documents" element={<MyDocumentsPage />} />
         <Route path="templates" element={<TemplatesPage />} />
         <Route path="integrations" element={<IntegrationsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="billing" element={<BillingPage />} />
         <Route path="parent-communication" element={<ParentCommunicationPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

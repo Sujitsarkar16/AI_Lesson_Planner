@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": false,
+    "noEmit": false,
+    "outDir": "dist-worker",
+    "rootDir": "api",
+    "skipLibCheck": true
+  },
+  "include": ["api/worker.ts"]
+}

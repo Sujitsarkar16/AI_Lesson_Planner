@@ -45,6 +45,7 @@ const StudyNotesGenerator: React.FC<Props> = ({ onBack }) => {
 
   const activeTemplate = useSelectedTemplate('study-notes');
   const [isLoading, setIsLoading] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState('');
   const [isSaved, setIsSaved] = useState(false);
 
@@ -66,6 +67,7 @@ const StudyNotesGenerator: React.FC<Props> = ({ onBack }) => {
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setGenerationStatus('queued');
     setGeneratedContent('');
     setIsSaved(false);
     verification.resetStream();
@@ -86,7 +88,8 @@ const StudyNotesGenerator: React.FC<Props> = ({ onBack }) => {
         tone,
         keyConcepts,
         customInstructions,
-        templateContext: activeTemplate?.promptContext
+        templateContext: activeTemplate?.promptContext,
+        onStatus: setGenerationStatus
       });
 
       // Process streaming with verification
@@ -157,6 +160,7 @@ const StudyNotesGenerator: React.FC<Props> = ({ onBack }) => {
       generatedContent={generatedContent}
       onContentChange={setGeneratedContent}
       isLoading={isLoading}
+      jobStatus={generationStatus}
       onBack={onBack}
       onSave={handleSave}
       isSaved={isSaved}

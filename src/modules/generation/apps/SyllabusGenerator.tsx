@@ -41,6 +41,7 @@ const SyllabusGenerator: React.FC<Props> = ({ onBack }) => {
   const activeTemplate = useSelectedTemplate('syllabus');
 
   const [isLoading, setIsLoading] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState('');
   const [isSaved, setIsSaved] = useState(false);
 
@@ -54,6 +55,7 @@ const SyllabusGenerator: React.FC<Props> = ({ onBack }) => {
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setGenerationStatus('queued');
     setGeneratedContent('');
     setIsSaved(false);
     verification.resetStream();
@@ -76,7 +78,8 @@ const SyllabusGenerator: React.FC<Props> = ({ onBack }) => {
         teachingApproach,
         materials,
         additionalRequests,
-        templateContext: activeTemplate?.promptContext
+        templateContext: activeTemplate?.promptContext,
+        onStatus: setGenerationStatus
       });
 
       // Process streaming with verification
@@ -150,6 +153,7 @@ const SyllabusGenerator: React.FC<Props> = ({ onBack }) => {
       generatedContent={generatedContent}
       onContentChange={setGeneratedContent}
       isLoading={isLoading}
+      jobStatus={generationStatus}
       onBack={onBack}
       onSave={handleSave}
       isSaved={isSaved}

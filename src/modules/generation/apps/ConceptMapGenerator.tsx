@@ -22,6 +22,7 @@ const ConceptMapGenerator: React.FC<Props> = ({ onBack }) => {
   const [mapId, setMapId] = useState<string>('');
 
   const [isLoading, setIsLoading] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +53,7 @@ const ConceptMapGenerator: React.FC<Props> = ({ onBack }) => {
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setGenerationStatus('queued');
     setGeneratedContent('');
     setIsSaved(false);
     setError(null);
@@ -60,7 +62,9 @@ const ConceptMapGenerator: React.FC<Props> = ({ onBack }) => {
     try {
       // Use Gemini API for generation
       const jsonData = await generateConceptMap({
-        topic
+        topic,
+        nodeCount,
+        onStatus: setGenerationStatus
       });
 
       setGeneratedContent(JSON.stringify(jsonData));
@@ -210,6 +214,7 @@ const ConceptMapGenerator: React.FC<Props> = ({ onBack }) => {
       icon="account_tree"
       generatedContent={generatedContent}
       isLoading={isLoading}
+      jobStatus={generationStatus}
       onBack={onBack}
       onSave={handleSave}
       isSaved={isSaved}

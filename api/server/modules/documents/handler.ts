@@ -2,53 +2,20 @@ import { ObjectId } from 'mongodb';
 import type { AuthenticatedUser } from '../../shared/auth.js';
 import { getDatabase, id, objectId } from '../../shared/database.js';
 import { json, readBody, type ApiRequest, type ApiResponse } from '../../shared/http.js';
-import { profileFor } from '../user/service.js';
+import { idempotencyKey, resolveEntitlement } from '../billing/core.js';
+import { queueExport } from '../billing/handler.js';
 
-const documentResponse = (document: any) => ({
-  id: id(document._id),
-  title: document.title,
-  subject: document.subject,
-  grade: document.grade,
-  dateCreated: document.createdAt.toISOString().slice(0, 10),
-  content: document.content,
-  duration: document.duration || undefined,
-  type: document.type,
-  templateId: document.templateId || undefined,
-  imageUrl: document.imageUrl || undefined,
-  metadata: document.metadata || {}
-});
+const documentResponse = (document: any) => ({ id: id(document._id), title: document.title, subject: document.subject, grade: document.grade, dateCreated: document.createdAt.toISOString().slice(0, 10), content: document.content, duration: document.duration || undefined, type: document.type, templateId: document.templateId || undefined, imageUrl: document.imageUrl || undefined, metadata: document.metadata || {} });
+export const requireOwnedDocument = async (documentId: string, userId: ObjectId) => { const parsedId = objectId(documentId); if (!parsedId) throw new Error('Document not found.'); const document = await (await getDatabase()).collection('documents').findOne({ _id: parsedId, userId }); if (!document) throw new Error('Document not found.'); return document; };
+const exportMatch = (path: string) => path.match(/^\/documents\/([^/]+)\/exports\/(pdf|docx)$/);
 
-export const requireOwnedDocument = async (documentId: string, userId: ObjectId) => {
-  const parsedId = objectId(documentId);
-  if (!parsedId) throw new Error('Invalid document ID.');
-  const document = await (await getDatabase()).collection('documents').findOne({ _id: parsedId, userId });
-  if (!document) throw new Error('Document not found.');
-  return document;
-};
-
-export async function handleDocuments(req: ApiRequest, res: ApiResponse, path: string, auth: AuthenticatedUser) {
-  if (!path.startsWith('/documents')) return false;
-
-  const db = await getDatabase();
-  const body = req.method === 'GET' ? {} : await readBody(req);
-  const profile = await profileFor(auth, body);
-  const userId = profile._id as ObjectId;
-
-  if (path === '/documents' && req.method === 'GET') {
-    const documents = await db.collection('documents').find({ userId }).sort({ createdAt: -1 }).toArray();
-    return json(res, 200, documents.map(documentResponse));
-  }
-  if (path === '/documents' && req.method === 'POST') {
-    const now = new Date();
-    const document = { userId, type: body.type || 'lesson-plan', title: body.title, subject: body.subject, grade: body.grade, content: body.content || '', metadata: body.metadata || {}, templateId: body.templateId || null, imageUrl: body.imageUrl || null, duration: body.duration || null, createdAt: now, updatedAt: now };
-    const result = await db.collection('documents').insertOne(document);
-    return json(res, 201, documentResponse({ ...document, _id: result.insertedId }));
-  }
-  if (path.startsWith('/documents/') && req.method === 'DELETE') {
-    const parsedId = objectId(path.slice('/documents/'.length));
-    if (!parsedId) return json(res, 400, { error: 'Invalid document ID.' });
-    const result = await db.collection('documents').deleteOne({ _id: parsedId, userId });
-    return json(res, result.deletedCount ? 200 : 404, { success: Boolean(result.deletedCount) });
-  }
+export async function handleDocuments(req: ApiRequest, res: ApiResponse, path: string, _auth: AuthenticatedUser, profile: any) {
+  if (!path.startsWith('/documents')) return false; const db = await getDatabase(); const ownerId = profile._id as ObjectId; const body = req.method === 'GET' ? {} : await readBody(req); const entitlement = await resolveEntitlement(db, ownerId);
+  if (path === '/documents' && req.method === 'GET') { const filter: any = { userId: ownerId }; if (entitlement.historyStart) filter.createdAt = { $gte: entitlement.historyStart }; return json(res, 200, (await db.collection('documents').find(filter).sort({ createdAt: -1 }).toArray()).map(documentResponse)); }
+  const match = exportMatch(path);
+  if (match && req.method === 'POST') { const documentId = objectId(match[1]); const key = idempotencyKey(req.headers['idempotency-key']); if (!documentId) return json(res, 404, { error: 'Document not found.' }); if (!key) return json(res, 400, { error: 'A valid Idempotency-Key header is required.' }); const owned = await db.collection('documents').findOne({ _id: documentId, userId: ownerId }); if (!owned) return json(res, 404, { error: 'Document not found.' }); if (entitlement.tier !== 'pro') return json(res, 403, { error: 'Export requires Pro.', code: 'UpgradeRequired' }); const job = await queueExport(db, ownerId, documentId, match[2] as 'pdf' | 'docx', key); return json(res, 202, { job: { id: job._id.toHexString(), status: job.status, format: match[2] } }); }
+  if (path === '/documents' && req.method === 'POST') { const now = new Date(); const document = { userId: ownerId, type: body.type || 'lesson-plan', title: body.title, subject: body.subject, grade: body.grade, content: body.content || '', metadata: body.metadata || {}, templateId: body.templateId || null, imageUrl: body.imageUrl || null, duration: body.duration || null, createdAt: now, updatedAt: now }; const result = await db.collection('documents').insertOne(document); return json(res, 201, documentResponse({ ...document, _id: result.insertedId })); }
+  if (path.startsWith('/documents/') && req.method === 'GET') { const documentId = objectId(path.slice('/documents/'.length)); if (!documentId) return json(res, 404, { error: 'Document not found.' }); const filter: any = { _id: documentId, userId: ownerId }; if (entitlement.historyStart) filter.createdAt = { $gte: entitlement.historyStart }; const document = await db.collection('documents').findOne(filter); return json(res, document ? 200 : 404, document ? documentResponse(document) : { error: 'Document not found.' }); }
+  if (path.startsWith('/documents/') && req.method === 'DELETE') { const documentId = objectId(path.slice('/documents/'.length)); if (!documentId) return json(res, 404, { error: 'Document not found.' }); const result = await db.collection('documents').deleteOne({ _id: documentId, userId: ownerId }); return json(res, result.deletedCount ? 200 : 404, { success: Boolean(result.deletedCount) }); }
   return false;
 }

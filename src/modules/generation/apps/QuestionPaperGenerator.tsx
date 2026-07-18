@@ -28,12 +28,14 @@ const QuestionPaperGenerator: React.FC<Props> = ({ onBack }) => {
   const activeTemplate = useSelectedTemplate('paper');
 
   const [isLoading, setIsLoading] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState('');
   const [isSaved, setIsSaved] = useState(false);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setGenerationStatus('queued');
     setGeneratedContent('');
     setIsSaved(false);
 
@@ -43,7 +45,8 @@ const QuestionPaperGenerator: React.FC<Props> = ({ onBack }) => {
         subject,
         topics,
         templateContext: activeTemplate?.promptContext,
-        parts: 'Part A (Short), Part B (Paragraph), Part C (Essay)'
+        parts: 'Part A (Short), Part B (Paragraph), Part C (Essay)',
+        onStatus: setGenerationStatus
       });
 
       for await (const chunk of stream) {
@@ -106,6 +109,7 @@ ${generatedContent}`;
       generatedContent={generatedContent}
       onContentChange={setGeneratedContent}
       isLoading={isLoading}
+      jobStatus={generationStatus}
       onBack={onBack}
       onSave={handleSave}
       isSaved={isSaved}
