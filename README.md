@@ -1,4 +1,4 @@
-<p align="center"><img src="Banner.png" alt="curriculamIQ" width="136" /></p>
+<p align="center"><img src="Banner.png" alt="curriculamIQ" width="640" /></p>
 <h1 align="center">curriculamIQ</h1>
 <p align="center">A focused AI workspace for educators to create, adapt, review, and export classroom-ready learning materials.</p>
 <p align="center">
