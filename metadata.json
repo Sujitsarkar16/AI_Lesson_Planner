@@ -1,5 +1,5 @@
 {
-  "name": "AI Lesson Planner",
-  "description": "An AI-powered tool for educators to generate standards-aligned lesson plans in seconds.",
+  "name": "curriculamIQ",
+  "description": "An AI-powered workspace for educators to create, adapt, and export lesson plans and classroom materials.",
   "requestFramePermissions": []
 }

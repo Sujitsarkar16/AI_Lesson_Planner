@@ -3,29 +3,31 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Lesson Planner</title>
+    <meta name="description" content="Create lesson plans, assessments, adaptations, and classroom materials with curriculamIQ, an AI workspace for educators." />
+    <meta name="keywords" content="curriculamIQ, AI lesson planner, AI lesson plan generator, lesson planning tool for teachers, teacher AI tools, classroom materials generator" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#1d1d25" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="curriculamIQ" />
+    <meta property="og:title" content="curriculamIQ" />
+    <meta property="og:description" content="More time for teaching. Less time planning." />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="curriculamIQ" />
+    <meta name="twitter:description" content="AI lesson planning for thoughtful teachers." />
+    <title>curriculamIQ</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reactflow@11.11.4/dist/style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Manrope:wght@400..800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
     <!-- Highlight.js CSS for code syntax highlighting in Markdown -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <style>
-      body {
-        font-family: 'Lexend', sans-serif;
-      }
-      h1, h2, h3, h4, h5, h6 {
-        font-family: 'Space Grotesk', sans-serif;
-      }
-      .material-symbols-outlined {
-        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-      }
-      .material-symbols-outlined.fill {
-        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-      }
+      body { font-family: 'DM Sans', sans-serif; }
+      h1, h2, h3, h4, h5, h6 { font-family: 'Manrope', sans-serif; }
+      .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+      .material-symbols-outlined.fill { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
     </style>
     <script>
       tailwind.config = {
@@ -33,28 +35,25 @@
         theme: {
           extend: {
             colors: {
-              "primary": "#7c3aed", /* Violet 600 */
-              "primary-dark": "#6d28d9", /* Violet 700 */
-              "background-light": "#f8fafc", /* Slate 50 */
-              "background-dark": "#0f172a", /* Slate 900 */
-              "brand-yellow": "#fcd34d", /* Amber 300 */
-              "brand-pink": "#f472b6", /* Pink 400 */
-              "brand-blue": "#38bdf8", /* Sky 400 */
-              "brand-green": "#4ade80", /* Green 400 */
-              "brand-orange": "#fb923c", /* Orange 400 */
-              "brand-black": "#1e293b", /* Slate 800 */
+              "primary": "#5b5bd6",
+              "primary-dark": "#4747b8",
+              "background-light": "#f8f8fb",
+              "background-dark": "#17171d",
+              "brand-yellow": "#eeecff",
+              "brand-pink": "#f7f1ff",
+              "brand-blue": "#eef4ff",
+              "brand-green": "#eef8f3",
+              "brand-orange": "#fff5ec",
+              "brand-black": "#1d1d25",
             },
             fontFamily: {
-              "display": ["Space Grotesk", "sans-serif"],
-              "body": ["Lexend", "sans-serif"]
+              "display": ["Manrope", "sans-serif"],
+              "body": ["DM Sans", "sans-serif"]
             },
             boxShadow: {
-              'neo': '4px 4px 0px 0px rgba(30, 41, 59, 1)',
-              'neo-sm': '2px 2px 0px 0px rgba(30, 41, 59, 1)',
-              'neo-lg': '6px 6px 0px 0px rgba(30, 41, 59, 1)',
-            },
-            borderWidth: {
-              '3': '3px',
+              'neo': '0 12px 30px rgba(25, 25, 40, 0.08)',
+              'neo-sm': '0 4px 12px rgba(25, 25, 40, 0.07)',
+              'neo-lg': '0 20px 44px rgba(25, 25, 40, 0.12)',
             }
           },
         },
@@ -73,7 +72,7 @@
     "remark-gfm": "https://esm.sh/remark-gfm@4?bundle",
     "rehype-highlight": "https://esm.sh/rehype-highlight@7?bundle",
     "rehype-raw": "https://esm.sh/rehype-raw@7?bundle",
-    "recharts": "https://esm.sh/recharts@2.12.0?bundle",
+
     "mermaid": "https://esm.sh/mermaid@10?bundle",
     "reactflow": "https://esm.sh/reactflow@11.11.4?bundle",
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
@@ -81,10 +80,10 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+<link rel="stylesheet" href="/src/index.css">
 </head>
   <body class="bg-background-light dark:bg-background-dark text-brand-black dark:text-white antialiased selection:bg-primary selection:text-white">
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

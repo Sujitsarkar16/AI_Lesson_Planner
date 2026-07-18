@@ -1,89 +1,30 @@
 {
   "version": 2,
   "name": "ai-lesson-planner",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
+    { "src": "/api/(.*)", "dest": "/api/index.ts" },
+    { "src": "/(robots\\.txt|sitemap\\.xml)", "dest": "/api/index.ts" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ],
-  "env": {
-    "VITE_AUTH0_DOMAIN": "@vite_auth0_domain",
-    "VITE_AUTH0_CLIENT_ID": "@vite_auth0_client_id",
-    "VITE_AUTH0_AUDIENCE": "@vite_auth0_audience",
-    "VITE_API_KEY": "@vite_api_key",
-    "VITE_SUPABASE_URL": "@vite_supabase_url",
-    "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key",
-    "VITE_STRIPE_PUBLISHABLE_KEY": "@vite_stripe_publishable_key",
-    "VITE_STRIPE_PRO_PRICE_ID": "@vite_stripe_pro_price_id",
-    "VITE_STRIPE_SCHOOL_PRICE_ID": "@vite_stripe_school_price_id",
-    "VITE_APP_URL": "@vite_app_url",
-    "VITE_ENVIRONMENT": "production"
-  },
-  "build": {
-    "env": {
-      "VITE_AUTH0_DOMAIN": "@vite_auth0_domain",
-      "VITE_AUTH0_CLIENT_ID": "@vite_auth0_client_id",
-      "VITE_AUTH0_AUDIENCE": "@vite_auth0_audience",
-      "VITE_API_KEY": "@vite_api_key",
-      "VITE_SUPABASE_URL": "@vite_supabase_url",
-      "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key",
-      "VITE_STRIPE_PUBLISHABLE_KEY": "@vite_stripe_publishable_key",
-      "VITE_STRIPE_PRO_PRICE_ID": "@vite_stripe_pro_price_id",
-      "VITE_STRIPE_SCHOOL_PRICE_ID": "@vite_stripe_school_price_id",
-      "VITE_APP_URL": "@vite_app_url",
-      "VITE_ENVIRONMENT": "production"
-    }
-  },
   "functions": {
-    "api/**/*.ts": {
-      "runtime": "nodejs18.x",
-      "maxDuration": 30
-    }
+    "api/index.ts": { "runtime": "nodejs20.x", "maxDuration": 30 }
   },
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
   "headers": [
+    {
+      "source": "/(auth|student-portal|dashboard)(/.*)?",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=()"
-        }
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
       ]
     }
   ]
